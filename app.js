@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const cors = require('cors');
 
 const app = express();
 // Create an HTTP server using the Express app as the request handler
@@ -15,7 +16,8 @@ const deviceList = [];
 
 // Serve static HTML/JS files from a "public" folder
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json()); 
+app.use(express.json());
+app.use(cors());
 
 
 // Standard HTTP Route
