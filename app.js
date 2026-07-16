@@ -1,61 +1,69 @@
-const express = require("express");
+const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const path = require('path');
+
 const app = express();
-const port = process.env.PORT || 3001;
+// Create an HTTP server using the Express app as the request handler
+const server = http.createServer(app);
+// Attach Socket.IO to the HTTP server instance
+const io = new Server(server, {
+  cors: { origin: "*" }
+});
 
-app.get("/", (req, res) => res.type('html').send(html));
+const deviceList = [];
 
-const server = app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+// Serve static HTML/JS files from a "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json()); 
 
-server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
 
-const html = `
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Hello from Render!</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
-    <script>
-      setTimeout(() => {
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 },
-          disableForReducedMotion: true
-        });
-      }, 500);
-    </script>
-    <style>
-      @import url("https://p.typekit.net/p.css?s=1&k=vnd5zic&ht=tk&f=39475.39476.39477.39478.39479.39480.39481.39482&a=18673890&app=typekit&e=css");
-      @font-face {
-        font-family: "neo-sans";
-        src: url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff2"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/d?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("woff"), url("https://use.typekit.net/af/00ac0a/00000000000000003b9b2033/27/a?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3") format("opentype");
-        font-style: normal;
-        font-weight: 700;
-      }
-      html {
-        font-family: neo-sans;
-        font-weight: 700;
-        font-size: calc(62rem / 16);
-      }
-      body {
-        background: white;
-      }
-      section {
-        border-radius: 1em;
-        padding: 1em;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        margin-right: -50%;
-        transform: translate(-50%, -50%);
-      }
-    </style>
-  </head>
-  <body>
-    <section>
-      Hello from Render!
-    </section>
-  </body>
-</html>
-`
+// Standard HTTP Route
+app.get('/api/status', (req, res) => {
+  res.json({ status: 'Server is running smoothly' });
+});
+
+// Standard HTTP Route
+app.post('/api/updateDevice', (req, res) => {
+  let updatedDeviceData = req.body;
+
+  const deviceExists = deviceList.some(deviceData => deviceData.name === updatedDeviceData.name);
+
+  const existingDeviceIndex = deviceList.findIndex(deviceData => deviceData.name === updatedDeviceData.name);
+
+  if (existingDeviceIndex != -1){
+    deviceList[existingDeviceIndex] = updatedDeviceData;
+  } else {
+    deviceList.push(updatedDeviceData);
+  }
+
+  io.emit('update-device-list', deviceList);
+  res.json({ status: 'Devices Updated' });
+});
+
+
+// Socket.IO Event Handling
+io.on('connection', (socket) => {
+  console.log(`User connected: ${socket.id}`);
+
+  io.emit('update-device-list', deviceList);
+
+  // Listen for custom event from client
+  //socket.on('chatMessage', (data) => {
+  //  console.log('Received message:', data);
+//
+  //  // Broadcast the message back to all connected clients
+  //  //io.emit('messageFromServer', data);
+  //});
+
+  // Handle user disconnect
+  socket.on('disconnect', () => {
+    console.log(`User disconnected: ${socket.id}`);
+  });
+});
+
+// Start the server (Listen on the server instance, NOT the app instance)
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+});
