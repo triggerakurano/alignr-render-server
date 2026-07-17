@@ -60,6 +60,21 @@ app.post('/api/sendLongTermData', async (req, res) => {
   res.json({ status: 'Long Term Data Received' });
 });
 
+// Get long term data
+app.get('/api/getLongTermData', async (req, res) => {
+  await client.connect();
+  const db = client.db('Longterm-Data-DB');
+  const collection = await db.collection("Longterm-Data-Collection");
+
+  const lastFiveDocs = await collection
+    .find({})
+    .sort({ _id: -1 })
+    .limit(1)
+    .toArray();
+
+  await client.close();
+  res.json({ lastData: lastFiveDocs });
+});
 
 // Standard HTTP Route
 app.post('/api/updateDevice', (req, res) => {
