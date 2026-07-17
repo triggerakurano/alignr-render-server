@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
+const {MongoClient} = require('mongodb')
 
 const app = express();
 // Create an HTTP server using the Express app as the request handler
@@ -11,6 +12,22 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+
+const client = new MongoClient(process.env.MONGODB_URI);
+
+const getDevices = async () => {
+  try {
+    await client.connect();
+    const db = client.db('ALIGNR-Devices-DB');
+    const collection = await db.collection("ALIGNR-Devices-Collection");
+    const allDocs = await collection.find({}).toArray();
+    await client.close();
+    return allDocs;
+  } catch (error) {
+    await client.close();
+    return { error }
+  }
+};
 
 const deviceList = [];
 
@@ -25,11 +42,28 @@ app.get('/api/status', (req, res) => {
   res.json({ status: 'Server is running smoothly' });
 });
 
+// Send longterm data
+app.post('/api/sendLongTermData', async (req, res) => {
+  let longTermData = req.body;
+
+  const newMeasurement = {
+    metadata: { deviceID: longTermData.name }, // relatively static
+    timestamp: new Date(), // Standard ISO-8601 Date format
+    value: longTermData.data
+  };
+
+  await client.connect();
+  const db = client.db('Longterm-Data-DB');
+  const collection = await db.collection("Longterm-Data-Collection");
+  const result = await collection.insertOne(newMeasurement);
+  
+  res.json({ status: 'Long Term Data Received' });
+});
+
+
 // Standard HTTP Route
 app.post('/api/updateDevice', (req, res) => {
   let updatedDeviceData = req.body;
-
-  const deviceExists = deviceList.some(deviceData => deviceData.name === updatedDeviceData.name);
 
   const existingDeviceIndex = deviceList.findIndex(deviceData => deviceData.name === updatedDeviceData.name);
 
@@ -41,6 +75,12 @@ app.post('/api/updateDevice', (req, res) => {
 
   io.emit('update-device-list', deviceList);
   res.json({ status: 'Devices Updated' });
+});
+
+// Standard HTTP Route
+app.get('/api/getDeviceMongo', async (req, res) => {
+  let devices = await getDevices();
+  res.json({ data: devices });
 });
 
 
