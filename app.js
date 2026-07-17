@@ -48,7 +48,7 @@ app.post('/api/sendLongTermData', async (req, res) => {
 
   const newMeasurement = {
     metadata: { deviceID: longTermData.name }, // relatively static
-    timestamp: new Date(), // Standard ISO-8601 Date format
+    timeStamp: new Date(), // Standard ISO-8601 Date format
     value: longTermData.data
   };
 
