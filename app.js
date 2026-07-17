@@ -63,6 +63,7 @@ app.post('/api/sendLongTermData', async (req, res) => {
 app.post('/api/clearCurrentDevices', async (req, res) => {
   deviceList.length = 0;
   res.json({ status: 'Devices Cleared' });
+  io.emit('update-device-list', deviceList);
 });
 
 // Get long term data
