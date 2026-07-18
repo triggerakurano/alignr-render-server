@@ -74,7 +74,7 @@ app.get('/api/getLongTermData', async (req, res) => {
 
   const lastFiveDocs = await collection
     .find({})
-    .sort({ _id: -1 })
+    .sort({ timeStamp: -1 })
     .limit(1)
     .toArray();
 
